@@ -200,7 +200,6 @@ export const getCollabJSONs = (editorView, collabIds) => {
 
 export const importDocJson = (editorView, docJson) => {
 	const doc = Node.fromJSON(editorView.state.schema, docJson);
-	console.log('THE RESULTING DOC', doc);
 	const tr = editorView.state.tr;
 	tr.setSelection(Selection.atStart(editorView.state.doc));
 	tr.replaceSelection(new Slice(doc.content, 0, 0));
