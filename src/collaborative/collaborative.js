@@ -39,29 +39,27 @@ const createFirebaseCollabPlugin = ({
 		branchId: branchId,
 	});
 
+	const receiveSteps = (editorView) => ({ steps, clientIds, highestKey }) => {
+		try {
+			const trans = receiveTransaction(editorView.state, steps, clientIds);
+			editorView.dispatch(trans);
+			if (checkpointInterval && highestKey > 0 && highestKey % checkpointInterval === 0) {
+				storeCheckpoint(firebaseRef, editorView.state.doc, highestKey);
+			}
+		} catch (err) {
+			onError(err);
+		}
+	};
+
 	const setupView = (editorView) => {
 		authority
-			.connect(({ steps, clientIds, highestKey }) => {
-				try {
-					const trans = receiveTransaction(editorView.state, steps, clientIds);
-					editorView.dispatch(trans);
-					if (
-						checkpointInterval &&
-						highestKey > 0 &&
-						highestKey % checkpointInterval === 0
-					) {
-						storeCheckpoint(firebaseRef, editorView.state.doc, highestKey);
-					}
-				} catch (err) {
-					onError(err);
-				}
-			})
-			.catch(onError)
+			.connect(receiveSteps(editorView))
 			.then(() => {
 				const connectedTransaction = editorView.state.tr;
 				connectedTransaction.setMeta('connectedToFirebase', true);
 				editorView.dispatch(connectedTransaction);
-			});
+			})
+			.catch(onError);
 		return {};
 	};
 
@@ -86,7 +84,7 @@ const createFirebaseCollabPlugin = ({
 };
 
 export default (schema, { onError, collaborativeOptions = {} }) => {
-	const { firebaseRef, initialKey, clientData } = collaborativeOptions;
+	const { firebaseRef, initialDocKey, clientData } = collaborativeOptions;
 	if (!firebaseRef) {
 		return [];
 	}
@@ -97,7 +95,7 @@ export default (schema, { onError, collaborativeOptions = {} }) => {
 		createFirebaseCollabPlugin({
 			firebaseRef: firebaseRef,
 			prosemirrorSchema: schema,
-			initialKey: initialKey,
+			initialKey: initialDocKey,
 			branchId: branchId,
 			onError: onError,
 			checkpointInterval: 100,
