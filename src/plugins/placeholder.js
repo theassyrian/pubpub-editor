@@ -1,6 +1,6 @@
 import { Plugin } from 'prosemirror-state';
 import { DecorationSet, Decoration } from 'prosemirror-view';
-import { collaborativePluginKey } from '../collaborative';
+import { collaborativePluginKey } from './collaborative';
 import { docIsEmpty } from '../utils';
 
 export default (schema, props) => {

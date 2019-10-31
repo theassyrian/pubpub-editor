@@ -1,7 +1,7 @@
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { collab, receiveTransaction, sendableSteps } from 'prosemirror-collab';
 
-import { generateHash, storeCheckpoint } from '../utils';
+import { generateHash, storeCheckpoint } from '../../utils';
 
 import { createFirebaseAuthority } from './authority';
 

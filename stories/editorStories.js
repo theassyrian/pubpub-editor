@@ -51,6 +51,7 @@ storiesOf('Editor', module)
 				placeholder="Begin writing..."
 				initialContent={initialContent}
 				// isReadOnly={true}
+				onError={(err) => console.error(err)}
 				onChange={(changeObject) => {
 					// console.log('====');
 					// console.log(JSON.stringify(changeObject.view.state.doc.toJSON(), null, 4));
@@ -163,7 +164,7 @@ storiesOf('Editor', module)
 						collaborativeOptions={{
 							firebaseRef: firebaseBranchRef,
 							clientData: clientData,
-							initialKey: -1,
+							initialDocKey: -1,
 							// onClientChange: () => {},
 							// onStatusChange: () => {},
 						}}
