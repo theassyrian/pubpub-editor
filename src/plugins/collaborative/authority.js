@@ -99,5 +99,7 @@ export const createFirebaseAuthority = ({
 	return {
 		connect: connect,
 		sendSteps: sendSteps,
+		getHighestKnownKey: () => highestKnownKey,
+		getFirebaseRef: () => firebaseRef,
 	};
 };

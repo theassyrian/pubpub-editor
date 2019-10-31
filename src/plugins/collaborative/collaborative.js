@@ -24,27 +24,13 @@ export const sendCollabChanges = async (editorView, transaction) => {
 	}
 };
 
-const createFirebaseCollabPlugin = ({
-	firebaseRef,
-	prosemirrorSchema,
-	initialKey,
-	branchId,
-	onError,
-	checkpointInterval,
-}) => {
-	const authority = createFirebaseAuthority({
-		firebaseRef: firebaseRef,
-		initialKey: initialKey,
-		prosemirrorSchema: prosemirrorSchema,
-		branchId: branchId,
-	});
-
+const createFirebaseCollabPlugin = ({ authority, checkpointInterval, onError }) => {
 	const receiveSteps = (editorView) => ({ steps, clientIds, highestKey }) => {
 		try {
 			const trans = receiveTransaction(editorView.state, steps, clientIds);
 			editorView.dispatch(trans);
 			if (checkpointInterval && highestKey > 0 && highestKey % checkpointInterval === 0) {
-				storeCheckpoint(firebaseRef, editorView.state.doc, highestKey);
+				storeCheckpoint(authority.getFirebaseRef(), editorView.state.doc, highestKey);
 			}
 		} catch (err) {
 			onError(err);
@@ -88,17 +74,23 @@ export default (schema, { onError, collaborativeOptions = {} }) => {
 	if (!firebaseRef) {
 		return [];
 	}
+
 	const localClientId = `${clientData.id}-${generateHash(6)}`;
 	const branchId = firebaseRef.key.replace('branch-', '');
+
+	const authority = createFirebaseAuthority({
+		branchId: branchId,
+		firebaseRef: firebaseRef,
+		initialKey: initialDocKey,
+		prosemirrorSchema: schema,
+	});
+
 	return [
 		collab({ clientID: localClientId }),
 		createFirebaseCollabPlugin({
-			firebaseRef: firebaseRef,
-			prosemirrorSchema: schema,
-			initialKey: initialDocKey,
-			branchId: branchId,
-			onError: onError,
+			authority: authority,
 			checkpointInterval: 100,
+			onError: onError,
 		}),
 	];
 };
