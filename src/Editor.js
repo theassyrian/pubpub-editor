@@ -4,7 +4,7 @@ import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keydownHandler } from 'prosemirror-keymap';
 import { getPlugins } from './plugins';
-import { sendCollabChanges, collaborativePluginKey } from './collaborative';
+import { sendCollabChanges, collaborativePluginKey } from './plugins/collaborative';
 import { renderStatic, buildSchema } from './utils';
 
 require('./styles/base.scss');
