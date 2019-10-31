@@ -1,6 +1,6 @@
 import { Plugin } from 'prosemirror-state';
 import { DecorationSet, Decoration } from 'prosemirror-view';
-import { collaborativePluginKey } from './collaborative';
+import { collaborativePluginKey } from '../collaborative';
 import { docIsEmpty } from '../utils';
 
 export default (schema, props) => {
@@ -13,7 +13,8 @@ export default (schema, props) => {
 					placeHolderElem.className = 'prosemirror-placeholder';
 					const collaborativePluginState = collaborativePluginKey.getState(state);
 					const placeholderText =
-						props.collaborativeOptions.firebaseRef && !collaborativePluginState.isLoaded
+						props.collaborativeOptions.firebaseRef &&
+						!collaborativePluginState.isConnected
 							? 'Loading...'
 							: props.placeholder;
 					placeHolderElem.innerHTML = placeholderText;

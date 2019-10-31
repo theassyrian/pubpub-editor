@@ -1,5 +1,6 @@
 import { history } from 'prosemirror-history';
 import { gapCursor } from 'prosemirror-gapcursor';
+import buildCollaborative from '../collaborative';
 import buildOnChange from './onChange';
 import buildInputRules from './inputRules';
 import buildKeymap from './keymap';
@@ -7,7 +8,6 @@ import buildHeaderIds from './headerIds';
 import buildPlaceholder from './placeholder';
 import buildLocalHighlights from './localHighlights';
 import buildTable from './table';
-import buildCollaborative from './collaborative';
 import buildCitation from './citation';
 import buildFootnote from './footnote';
 

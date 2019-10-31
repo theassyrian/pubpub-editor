@@ -15,20 +15,16 @@ const changesStartingFrom = (firebaseRef, startingKey) =>
  * providing an array with a corresponding clientId for every step, and the highest key found in the
  * subset of changes.
  */
-const extractStepsFromFirebase = (firebaseChanges = {}, prosemirrorSchema) => {
-	const steps = [];
-	const clientIds = [];
-	let highestKey = 0;
-	Object.keys(firebaseChanges).forEach((key) => {
-		const { s: compressedSteps, c: clientId } = firebaseChanges[key];
-		const addedSteps = compressedSteps.map((cs) =>
-			Step.fromJSON(prosemirrorSchema, uncompressStepJSON(cs)),
-		);
-		steps.push(...addedSteps);
-		clientIds.push(...new Array(addedSteps.length).fill(clientId));
-		highestKey = Math.max(highestKey, parseInt(key, 10));
-	});
-	return { steps: steps, clientIds: clientIds, highestKey: highestKey };
+const extractStepsFromFirebaseChange = (key, firebaseChange, prosemirrorSchema) => {
+	const { s: compressedSteps, cId: clientId } = firebaseChange;
+	const steps = compressedSteps.map((cs) =>
+		Step.fromJSON(prosemirrorSchema, uncompressStepJSON(cs)),
+	);
+	return {
+		steps: steps,
+		clientIds: new Array(steps.length).fill(clientId),
+		key: parseInt(key, 10),
+	};
 };
 
 const createChangeForFirebase = (steps, clientId, branchId) => {
@@ -49,20 +45,40 @@ export const createFirebaseAuthority = ({
 }) => {
 	let highestKnownKey = initialKey;
 
-	const handleReceivedSnapshot = (onReceiveSteps) => (snapshot) => {
-		const { steps, clientIds, highestKey } = extractStepsFromFirebase(
-			snapshot.val(),
+	const handleInitialSnapshot = (changesSnapshot, onReceiveSteps) => {
+		const snapshotVal = changesSnapshot.val() || {};
+		const steps = [];
+		const clientIds = [];
+		Object.keys(snapshotVal).forEach((key) => {
+			const extracted = extractStepsFromFirebaseChange(
+				key,
+				snapshotVal[key],
+				prosemirrorSchema,
+			);
+			steps.push(...extracted.steps);
+			clientIds.push(...extracted.clientIds);
+			highestKnownKey = Math.max(extracted.key, highestKnownKey);
+		});
+		onReceiveSteps({ steps: steps, clientIds: clientIds, highestKey: highestKnownKey });
+	};
+
+	const handleReceivedSnapshot = (changeSnapshot, onReceiveSteps) => {
+		const { steps, clientIds, key } = extractStepsFromFirebaseChange(
+			changeSnapshot.key,
+			changeSnapshot.val() || {},
 			prosemirrorSchema,
 		);
-		highestKnownKey = highestKey;
-		onReceiveSteps({ steps: steps, clientIds: clientIds, highestKey: highestKey });
+		highestKnownKey = Math.max(highestKnownKey, key);
+		onReceiveSteps({ steps: steps, clientIds: clientIds, highestKey: highestKnownKey });
 	};
 
 	const connect = async (onReceiveSteps) => {
 		const changes = changesStartingFrom(firebaseRef, initialKey + 1);
-		const snapshot = await changes.once('value');
-		handleReceivedSnapshot(snapshot);
-		changes.on('child_added', handleReceivedSnapshot(onReceiveSteps));
+		const changesSnapshot = await changes.once('value');
+		handleInitialSnapshot(changesSnapshot, onReceiveSteps);
+		changesStartingFrom(firebaseRef, highestKnownKey + 1).on('child_added', (snapshot) =>
+			handleReceivedSnapshot(snapshot, onReceiveSteps),
+		);
 	};
 
 	const sendSteps = async (steps, clientId) => {

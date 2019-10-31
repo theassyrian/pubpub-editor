@@ -1,7 +1,7 @@
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { collab, receiveTransaction, sendableSteps } from 'prosemirror-collab';
 
-import { generateHash } from '../utils';
+import { generateHash, storeCheckpoint } from '../utils';
 
 import { createFirebaseAuthority } from './authority';
 
@@ -16,15 +16,22 @@ const transactionContainsInvalidKeys = (transaction) => {
 };
 
 export const sendCollabChanges = async (editorView, transaction) => {
-	const { authority, branchId } = collaborativePluginKey.getState(editorView.state);
+	const { authority } = collaborativePluginKey.getState(editorView.state);
 	const editable = editorView.props.editable(editorView.state);
 	const sendable = sendableSteps(editorView.state);
 	if (sendable && editable && !transactionContainsInvalidKeys(transaction)) {
-		await authority.sendSteps(sendable.version, sendable.steps, sendable.clientID, branchId);
+		await authority.sendSteps(sendable.steps, sendable.clientID);
 	}
 };
 
-const createFirebaseCollabPlugin = ({ firebaseRef, prosemirrorSchema, initialKey, branchId }) => {
+const createFirebaseCollabPlugin = ({
+	firebaseRef,
+	prosemirrorSchema,
+	initialKey,
+	branchId,
+	onError,
+	checkpointInterval,
+}) => {
 	const authority = createFirebaseAuthority({
 		firebaseRef: firebaseRef,
 		initialKey: initialKey,
@@ -34,21 +41,32 @@ const createFirebaseCollabPlugin = ({ firebaseRef, prosemirrorSchema, initialKey
 
 	const setupView = (editorView) => {
 		authority
-			.connect(({ steps, clientIds }) =>
-				receiveTransaction(editorView.state, steps, clientIds),
-			)
+			.connect(({ steps, clientIds, highestKey }) => {
+				try {
+					const trans = receiveTransaction(editorView.state, steps, clientIds);
+					editorView.dispatch(trans);
+					if (
+						checkpointInterval &&
+						highestKey > 0 &&
+						highestKey % checkpointInterval === 0
+					) {
+						storeCheckpoint(firebaseRef, editorView.state.doc, highestKey);
+					}
+				} catch (err) {
+					onError(err);
+				}
+			})
+			.catch(onError)
 			.then(() => {
 				const connectedTransaction = editorView.state.tr;
 				connectedTransaction.setMeta('connectedToFirebase', true);
 				editorView.dispatch(connectedTransaction);
 			});
+		return {};
 	};
 
 	return new Plugin({
 		key: collaborativePluginKey,
-		props: {
-			editable: (state) => collaborativePluginKey.getState(state).isConnected,
-		},
 		state: {
 			init: () => {
 				return {
@@ -67,7 +85,7 @@ const createFirebaseCollabPlugin = ({ firebaseRef, prosemirrorSchema, initialKey
 	});
 };
 
-export default (schema, { collaborativeOptions = {} }) => {
+export default (schema, { onError, collaborativeOptions = {} }) => {
 	const { firebaseRef, initialKey, clientData } = collaborativeOptions;
 	if (!firebaseRef) {
 		return [];
@@ -81,6 +99,8 @@ export default (schema, { collaborativeOptions = {} }) => {
 			prosemirrorSchema: schema,
 			initialKey: initialKey,
 			branchId: branchId,
+			onError: onError,
+			checkpointInterval: 100,
 		}),
 	];
 };

@@ -4,7 +4,7 @@ import { EditorState } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { keydownHandler } from 'prosemirror-keymap';
 import { getPlugins } from './plugins';
-import { collaborativePluginKey } from './plugins/collaborative';
+import { sendCollabChanges, collaborativePluginKey } from './collaborative';
 import { renderStatic, buildSchema } from './utils';
 
 require('./styles/base.scss');
@@ -68,7 +68,7 @@ const Editor = (props) => {
 				editable: (editorState) => {
 					if (
 						props.collaborativeOptions.firebaseRef &&
-						!collaborativePluginKey.getState(editorState).isLoaded
+						!collaborativePluginKey.getState(editorState).isConnected
 					) {
 						return false;
 					}
@@ -83,18 +83,16 @@ const Editor = (props) => {
 				handleClickOn: props.handleSingleClick,
 				handleDoubleClickOn: props.handleDoubleClick,
 				dispatchTransaction: (transaction) => {
-					try {
-						const newState = view.state.apply(transaction);
-						view.updateState(newState);
-						if (props.collaborativeOptions.firebaseRef) {
-							collaborativePluginKey
-								.getState(newState)
-								.sendCollabChanges(transaction, newState);
-						}
-					} catch (err) {
-						console.error('Error applying transaction:', err);
-						props.onError(err);
+					const newState = view.state.apply(transaction);
+					view.updateState(newState);
+					if (props.collaborativeOptions.firebaseRef) {
+						sendCollabChanges(view, transaction);
 					}
+					// } catch (err) {
+					// 	throw err;
+					// 	console.error('Error applying transaction:', err);
+					// 	props.onError(err);
+					// }
 				},
 			},
 		);

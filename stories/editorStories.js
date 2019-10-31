@@ -163,7 +163,7 @@ storiesOf('Editor', module)
 						collaborativeOptions={{
 							firebaseRef: firebaseBranchRef,
 							clientData: clientData,
-							initialDocKey: -1,
+							initialKey: -1,
 							// onClientChange: () => {},
 							// onStatusChange: () => {},
 						}}
