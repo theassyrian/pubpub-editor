@@ -595,7 +595,7 @@ export default (schema, props) => {
 						activeLink: getActiveLink(editorView),
 						/* boolean alerting whether the collab plugin has finished loading */
 						isCollabLoaded: editorView.state.collaborative$
-							? editorView.state.collaborative$.isLoaded
+							? editorView.state.collaborative$.isConnected
 							: false,
 					});
 				},

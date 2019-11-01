@@ -44,6 +44,7 @@ export const createFirebaseAuthority = ({
 	branchId,
 }) => {
 	let highestKnownKey = initialKey;
+	let pendingCount = 0;
 
 	const handleInitialSnapshot = (changesSnapshot, onReceiveSteps) => {
 		const snapshotVal = changesSnapshot.val() || {};
@@ -96,9 +97,24 @@ export const createFirebaseAuthority = ({
 		return committed;
 	};
 
+	const markPending = (promise) => {
+		pendingCount += 1;
+		promise
+			.then((res) => {
+				pendingCount -= 1;
+				return res;
+			})
+			.catch((err) => {
+				pendingCount -= 1;
+				throw err;
+			});
+	};
+
 	return {
 		connect: connect,
 		sendSteps: sendSteps,
+		markPending: markPending,
+		getPendingCount: () => pendingCount,
 		getHighestKnownKey: () => highestKnownKey,
 		getFirebaseRef: () => firebaseRef,
 	};

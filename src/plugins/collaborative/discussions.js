@@ -2,9 +2,22 @@ import { Plugin, Selection, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import { sendableSteps } from 'prosemirror-collab';
 import { uncompressSelectionJSON } from 'prosemirror-compress-pubpub';
+
 import { transactionAggregator } from './transactionAggregator';
 
 const discussionsPluginKey = new PluginKey('discussions');
+
+const createNewDiscussion = (from, to, currentKey) => ({
+	currentKey: currentKey,
+	initAnchor: from,
+	initHead: to,
+	initKey: currentKey,
+	selection: {
+		a: from,
+		h: to,
+		type: 'text',
+	},
+});
 
 const isDiscussionWidgetDecoration = (deco) => deco.spec.key.indexOf('discussion-widget-') === -1;
 
@@ -51,8 +64,7 @@ const getDecorationsToRemove = (updates, decorations) => {
 		.find()
 		.filter((deco) =>
 			updates.some(
-				({ type, data }) =>
-					type === 'removeDiscussion' && data.id === getIdFromDecoration(deco),
+				({ type, id }) => type === 'removeDiscussion' && id === getIdFromDecoration(deco),
 			),
 		);
 };
@@ -61,12 +73,23 @@ const getDecorationsToAdd = (updates, editorState, prevDecorations, highestKnown
 	if (!updates) {
 		return [];
 	}
-	return updates
-		.filter((update) => update.type === 'setDiscussion')
-		.map((discussion) => {
+
+	const fromAddDiscussion = updates
+		.filter((update) => update.type === 'addDiscussion')
+		.map((update) => {
+			return {
+				id: update.id,
+				discussion: update.buildDiscussion(highestKnownKey),
+			};
+		});
+
+	const fromSetDiscussion = updates.filter((update) => update.type === 'setDiscussion');
+
+	return [...fromAddDiscussion, ...fromSetDiscussion]
+		.map(({ id, discussion }) => {
 			const alreadyHandled = prevDecorations
 				.find()
-				.some((decoration) => getIdFromDecoration(decoration) === discussion.id);
+				.some((decoration) => getIdFromDecoration(decoration) === id);
 			const selection = getSelectionForDiscussion(editorState, discussion);
 			if (!alreadyHandled && selection && discussion.currentKey === highestKnownKey) {
 				return createDecorationsForDiscussion(discussion, selection);
@@ -77,8 +100,8 @@ const getDecorationsToAdd = (updates, editorState, prevDecorations, highestKnown
 };
 
 const persistDiscussions = (authority, discussionDecorations) => {
-	const { markPending, getHighestKnownKey, getFirebaseRef } = authority;
-	const highestKnownKey = getHighestKnownKey();
+	const { markPending, getFirebaseRef } = authority;
+	const highestKnownKey = authority.getHighestKnownKey();
 
 	const txBody = (decoration, existingDiscussion) => {
 		if (existingDiscussion && existingDiscussion.currentKey > highestKnownKey) {
@@ -108,8 +131,20 @@ const persistDiscussions = (authority, discussionDecorations) => {
 		);
 };
 
+export const addDiscussion = (editorView, discussionId, { from, to }) => {
+	const trans = editorView.state.tr;
+	trans.setMeta(discussionsPluginKey, [
+		{
+			type: 'addDiscussion',
+			id: discussionId,
+			buildDiscussion: (currentKey) => createNewDiscussion(from, to, currentKey),
+		},
+	]);
+	editorView.dispatch(trans);
+};
+
 // TODO(ian): Checking sendableSteps?
-export default (_, { authority }) => {
+export const createDiscussionsPlugin = ({ authority }) => {
 	const updateState = (transaction, pluginState, __, editorState) => {
 		const { discussionDecorations } = pluginState;
 		const updates = transaction.getMeta(discussionsPluginKey) || [];
@@ -119,8 +154,7 @@ export default (_, { authority }) => {
 			.remove(decorationsToRemove)
 			.map(transaction.mapping, transaction.doc)
 			.add(editorState.doc, decorationsToAdd);
-		// TODO(ian): do this more carefully
-		if (transaction.meta.collab$) {
+		if (updates.length > 0) {
 			persistDiscussions(authority, nextDiscussionDecorations);
 		}
 		return { discussionDecorations: nextDiscussionDecorations };
@@ -132,7 +166,8 @@ export default (_, { authority }) => {
 			return (snapshot) => {
 				aggregator.enqueue({
 					type: type,
-					data: { ...snapshot.val(), id: snapshot.key },
+					id: snapshot.key,
+					discussion: snapshot.val(),
 				});
 			};
 		};
@@ -140,6 +175,7 @@ export default (_, { authority }) => {
 		ref.on('child_added', createDecoTrans('setDiscussion'));
 		ref.on('child_changed', createDecoTrans('setDiscussion'));
 		ref.on('child_removed', createDecoTrans('removeDiscussion'));
+		return {};
 	};
 
 	const state = {
@@ -148,7 +184,7 @@ export default (_, { authority }) => {
 				discussionDecorations: DecorationSet.create(editorState.doc, []),
 			};
 		},
-		update: updateState,
+		apply: updateState,
 	};
 
 	const props = {

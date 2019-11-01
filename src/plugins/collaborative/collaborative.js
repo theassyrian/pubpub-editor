@@ -4,6 +4,7 @@ import { collab, receiveTransaction, sendableSteps } from 'prosemirror-collab';
 import { generateHash, storeCheckpoint } from '../../utils';
 
 import { createFirebaseAuthority } from './authority';
+import { createDiscussionsPlugin } from './discussions';
 
 export const collaborativePluginKey = new PluginKey('collaborative');
 
@@ -90,7 +91,11 @@ export default (schema, { onError, collaborativeOptions = {} }) => {
 		createFirebaseCollabPlugin({
 			authority: authority,
 			checkpointInterval: 100,
-			onError: onError,
+			onError: (err) => {
+				console.error(err);
+				onError(err);
+			},
 		}),
+		createDiscussionsPlugin({ authority: authority }),
 	];
 };

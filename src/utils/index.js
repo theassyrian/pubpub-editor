@@ -13,6 +13,7 @@ import css from 'css';
 import camelCaseCss from 'camelcase-css';
 
 import { defaultNodes, defaultMarks } from '../schemas';
+import { addDiscussion } from '../plugins/collaborative';
 
 export const firebaseTimestamp = { '.sv': 'timestamp' };
 
@@ -185,17 +186,6 @@ export const getText = (editorView, separator = '\n') => {
 		return null;
 	}
 	return editorView.state.doc.textBetween(0, editorView.state.doc.nodeSize - 2, separator);
-};
-
-export const getCollabJSONs = (editorView, collabIds) => {
-	const collabPlugin = editorView.state.plugins.reduce((prev, curr) => {
-		if (curr.key === 'collaborative$') {
-			return curr;
-		}
-		return prev;
-	}, undefined);
-
-	return collabPlugin ? collabPlugin.getJSONs(collabIds) : null;
 };
 
 export const importDocJson = (editorView, docJson) => {
@@ -685,14 +675,12 @@ export const restoreDiscussionMaps = (firebaseRef, schema, useMergeSteps) => {
 		});
 };
 
-export const formatDiscussionData = (editorView, from, to) => {
-	const collabPlugin = editorView.state.collaborative$ || {};
-	const remoteKey = collabPlugin.mostRecentRemoteKey;
+export const formatDiscussionData = (currentKey, from, to) => {
 	return {
-		currentKey: remoteKey,
+		currentKey: currentKey,
 		initAnchor: from,
 		initHead: to,
-		initKey: remoteKey,
+		initKey: currentKey,
 		selection: {
 			a: from,
 			h: to,
@@ -721,7 +709,7 @@ export const removeLocalHighlight = (editorView, id) => {
 	editorView.dispatch(transaction);
 };
 
-export const convertLocalHighlightToDiscussion = (editorView, highlightId, firebaseRef) => {
+export const convertLocalHighlightToDiscussion = (editorView, highlightId) => {
 	const localHighlight = editorView.state.localHighlights$.activeDecorationSet
 		.find()
 		.filter((decoration) => {
@@ -734,16 +722,8 @@ export const convertLocalHighlightToDiscussion = (editorView, highlightId, fireb
 			}
 			return prev;
 		}, {});
-	const newDiscussionData = formatDiscussionData(
-		editorView,
-		localHighlight.from,
-		localHighlight.to,
-	);
 	removeLocalHighlight(editorView, highlightId);
-	return firebaseRef
-		.child('discussions')
-		.child(highlightId)
-		.set(newDiscussionData);
+	addDiscussion(editorView, highlightId, localHighlight);
 };
 
 export const getLocalHighlightText = (editorView, highlightId) => {
