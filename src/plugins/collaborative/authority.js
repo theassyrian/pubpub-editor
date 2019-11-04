@@ -83,7 +83,7 @@ export const createFirebaseAuthority = ({
 	};
 
 	const sendSteps = async (steps, clientId) => {
-		const { committed } = await firebaseRef
+		const { committed } = await markPending(firebaseRef
 			.child('changes')
 			.child(highestKnownKey + 1)
 			.transaction((remoteData) => {
@@ -93,7 +93,7 @@ export const createFirebaseAuthority = ({
 					return undefined;
 				}
 				return createChangeForFirebase(steps, clientId, branchId);
-			});
+			}));
 		return committed;
 	};
 
@@ -108,6 +108,7 @@ export const createFirebaseAuthority = ({
 				pendingCount -= 1;
 				throw err;
 			});
+		return promise;
 	};
 
 	return {

@@ -21,18 +21,32 @@ export const sendCollabChanges = async (editorView, transaction) => {
 	const editable = editorView.props.editable(editorView.state);
 	const sendable = sendableSteps(editorView.state);
 	if (sendable && editable && !transactionContainsInvalidKeys(transaction)) {
-		await authority.sendSteps(sendable.steps, sendable.clientID);
+		await authority.sendCollabChanges(editorView, transaction);
 	}
 };
 
 const createFirebaseCollabPlugin = ({ authority, checkpointInterval, onError }) => {
-	const receiveSteps = (editorView) => ({ steps, clientIds, highestKey }) => {
+	const ongoingTransaction = false;
+	const pendingChanges = [];
+
+	const processPendingChanges = (editorView) => {
+		if (!ongoingTransaction) {
+			pendingChanges.forEach(({ steps, clientIds, highestKey }) => {
+				const trans = receiveTransaction(editorView.state, steps, clientIds);
+				editorView.dispatch(trans);
+				if (checkpointInterval && highestKey > 0 && highestKey % checkpointInterval === 0) {
+					storeCheckpoint(authority.getFirebaseRef(), editorView.state.doc, highestKey);
+				}
+			});
+		}
+	};
+
+	const receiveSteps = (editorView) => (change) => {
 		try {
-			const trans = receiveTransaction(editorView.state, steps, clientIds);
-			editorView.dispatch(trans);
-			if (checkpointInterval && highestKey > 0 && highestKey % checkpointInterval === 0) {
-				storeCheckpoint(authority.getFirebaseRef(), editorView.state.doc, highestKey);
+			if (change) {
+				pendingChanges.push(change);
 			}
+			processPendingChanges(editorView);
 		} catch (err) {
 			onError(err);
 		}
