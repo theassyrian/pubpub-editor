@@ -3,39 +3,7 @@ import { compressStepJSON, uncompressStepJSON } from 'prosemirror-compress-pubpu
 import uuidv4 from 'uuid/v4';
 import { firebaseTimestamp } from '../../utils';
 
-const changesStartingFrom = (firebaseRef, startingKey) =>
-	firebaseRef
-		.child('changes')
-		.orderByKey()
-		.startAt(startingKey.toString());
 
-/*
- * Given a snapshot of a subset of the changes on a branch from Firebase, provides a more structured
- * version of this data, extracting the steps and transforming them into Prosemirror objects,
- * providing an array with a corresponding clientId for every step, and the highest key found in the
- * subset of changes.
- */
-const extractStepsFromFirebaseChange = (key, firebaseChange, prosemirrorSchema) => {
-	const { s: compressedSteps, cId: clientId } = firebaseChange;
-	const steps = compressedSteps.map((cs) =>
-		Step.fromJSON(prosemirrorSchema, uncompressStepJSON(cs)),
-	);
-	return {
-		steps: steps,
-		clientIds: new Array(steps.length).fill(clientId),
-		key: parseInt(key, 10),
-	};
-};
-
-const createChangeForFirebase = (steps, clientId, branchId) => {
-	return {
-		id: uuidv4(),
-		cId: clientId,
-		bId: branchId,
-		s: steps.map((step) => compressStepJSON(step.toJSON())),
-		t: firebaseTimestamp,
-	};
-};
 
 export const createFirebaseAuthority = ({
 	firebaseRef,
