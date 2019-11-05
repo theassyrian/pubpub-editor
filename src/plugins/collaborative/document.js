@@ -133,9 +133,11 @@ export const createDocumentPlugin = (schema, props) => {
 				type: Actions.FINISH_FLUSH,
 				highestKey: Math.max(highestKey, getHighestKeyFromChanges(pendingChanges)),
 			});
-		} else if (status === Status.IDLE && pendingChanges.length > 0) {
+		}
+		if (prevState.status === Status.SENDING && status === Status.IDLE && pendingChanges.length > 0) {
 			dispatch({ type: Actions.START_FLUSH });
-		} else if (status === Status.IDLE && sendableSteps(editorView.state)) {
+		}
+		if (prevState.status === Status.FLUSHING && status === Status.IDLE && sendableSteps(editorView.state)) {
 			dispatch({ type: Actions.START_SEND });
 		}
 	};
