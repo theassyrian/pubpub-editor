@@ -62,6 +62,7 @@ const reducer = (state, action) => {
 
 export const createDocumentPlugin = (schema, props) => {
 	const {
+		onError,
 		collaborativeOptions: { firebaseRef, initialDocKey, onUpdateHighestKey, onStatusChange },
 	} = props;
 
@@ -91,9 +92,11 @@ export const createDocumentPlugin = (schema, props) => {
 			const sendable = sendableSteps(editorView.state);
 			if (sendable) {
 				const { steps, clientID } = sendable;
-				sendSteps(firebaseRef, steps, clientID, nextState.highestKey).then(() => {
-					dispatch({ type: Actions.FINISH_SEND });
-				});
+				sendSteps(firebaseRef, steps, clientID, nextState.highestKey)
+					.then(() => {
+						dispatch({ type: Actions.FINISH_SEND });
+					})
+					.catch(onError);
 			} else {
 				dispatch({ type: Actions.FINISH_SEND });
 			}
@@ -104,8 +107,12 @@ export const createDocumentPlugin = (schema, props) => {
 		// this state.
 		if (status === Status.FLUSHING && prevState.status !== Status.FLUSHING) {
 			pendingChanges.forEach(({ steps, clientIds }) => {
-				const tx = receiveTransaction(editorView.state, steps, clientIds);
-				editorView.dispatch(tx);
+				try {
+					const tx = receiveTransaction(editorView.state, steps, clientIds);
+					editorView.dispatch(tx);
+				} catch (err) {
+					onError(err);
+				}
 			});
 			dispatch({
 				type: Actions.FINISH_FLUSH,
@@ -127,9 +134,13 @@ export const createDocumentPlugin = (schema, props) => {
 		if (firebaseRef) {
 			receiveInitialChanges(firebaseRef, initialDocKey, schema).then((initialChange) => {
 				const { steps, clientIds, highestKey } = initialChange;
-				const tx = receiveTransaction(editorView.state, steps, clientIds);
-				editorView.dispatch(tx);
-				dispatch({ type: Actions.CONNECT, highestKey: highestKey });
+				try {
+					const tx = receiveTransaction(editorView.state, steps, clientIds);
+					editorView.dispatch(tx);
+					dispatch({ type: Actions.CONNECT, highestKey: highestKey });
+				} catch (err) {
+					onError(err);
+				}
 			});
 		} else {
 			dispatch({ type: Actions.DISABLE });

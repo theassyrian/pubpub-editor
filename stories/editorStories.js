@@ -160,6 +160,7 @@ storiesOf('Editor', module)
 						onChange={(evt) => {
 							updatechangeObject(evt);
 						}}
+						onError={(err) => console.error(err)}
 						collaborativeOptions={{
 							firebaseRef: firebaseBranchRef,
 							clientData: clientData,
