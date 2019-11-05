@@ -120,6 +120,8 @@ export const createDocumentPlugin = (schema, props) => {
 			});
 		} else if (status === Status.IDLE && pendingChanges.length > 0) {
 			dispatch({ type: Actions.START_FLUSH });
+		} else if (status === Status.IDLE && sendableSteps(editorView.state)) {
+			dispatch({ type: Actions.START_SEND });
 		}
 	};
 
