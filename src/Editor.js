@@ -84,6 +84,11 @@ const Editor = (props) => {
 				handleDoubleClickOn: props.handleDoubleClick,
 				dispatchTransaction: (transaction) => {
 					try {
+						console.log(
+							'dispatch txn',
+							transaction.steps.map((s) => s.toJSON()),
+							JSON.stringify(view.state.doc.toJSON()),
+						);
 						const newState = view.state.apply(transaction);
 						view.updateState(newState);
 						sendCollabChanges(newState);
