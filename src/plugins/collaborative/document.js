@@ -75,6 +75,7 @@ export const createDocumentPlugin = (schema, props) => {
 
 	const handleStateChange = (prevState, nextState, dispatch) => {
 		const { status, pendingChanges, highestKey } = nextState;
+		console.log('highestKey', highestKey);
 		if (onStatusChange && prevState.status !== status) {
 			onStatusChange(status);
 		}
