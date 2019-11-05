@@ -88,7 +88,8 @@ export const createDocumentPlugin = (schema, props) => {
 			});
 		}
 		// Send some changes, if they are available.
-		if (status === Status.SENDING && prevState.status !== Status.SENDING) {
+		// if (prevStatus === Status.IDLE && status === Status.SENDING && prevState.status !== Status.SENDING) {
+		if (prevState.status === Status.IDLE && status === Status.SENDING) {
 			const sendable = sendableSteps(editorView.state);
 			if (sendable) {
 				const { steps, clientID } = sendable;
@@ -105,7 +106,7 @@ export const createDocumentPlugin = (schema, props) => {
 		// Calling editorView.dispatch() will generate START_SEND actions which the reducer
 		// will ignore when status !== IDLE. So we have to take care about when we enter and exit
 		// this state.
-		if (status === Status.FLUSHING && prevState.status !== Status.FLUSHING) {
+		if (status === Status.FLUSHING && prevState.status === Status.IDLE) {
 			pendingChanges.forEach(({ steps, clientIds }) => {
 				try {
 					const tx = receiveTransaction(editorView.state, steps, clientIds);
