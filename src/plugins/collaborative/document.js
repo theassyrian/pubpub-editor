@@ -39,6 +39,7 @@ export const collabIsReady = (editorState) => {
 };
 
 const reducer = (state, action) => {
+	console.log('Action:', action.type);
 	const { pendingChanges, status } = state;
 	switch (action.type) {
 		case Actions.CONNECT:
@@ -54,7 +55,7 @@ const reducer = (state, action) => {
 		case Actions.START_FLUSH:
 			return status === Status.IDLE ? { status: Status.FLUSHING } : {};
 		case Actions.FINISH_FLUSH:
-			return { status: Status.IDLE, pendingChanges: [], highestKey: action.highestKey };
+			return { status: 'handleFinishFlush', pendingChanges: [], highestKey: action.highestKey };
 		default:
 			return state;
 	}
@@ -90,7 +91,7 @@ export const createDocumentPlugin = (schema, props) => {
 		}
 		// Send some changes, if they are available.
 		// if (prevStatus === Status.IDLE && status === Status.SENDING && prevState.status !== Status.SENDING) {
-		if (prevState.status === Status.IDLE && status === Status.SENDING) {
+		if (status === 'handleFinishFlush' || (prevState.status === Status.IDLE && status === Status.SENDING)) {
 			const sendable = sendableSteps(editorView.state);
 			if (sendable) {
 				const { steps, clientID } = sendable;
@@ -134,10 +135,12 @@ export const createDocumentPlugin = (schema, props) => {
 	};
 
 	const connect = (nextEditorView) => {
+		console.log('in connect');
 		editorView = nextEditorView;
 		if (firebaseRef) {
 			receiveInitialChanges(firebaseRef, initialDocKey, schema).then((initialChange) => {
 				const { steps, clientIds, highestKey } = initialChange;
+				console.log('in connect callback');
 				try {
 					dispatch({ type: Actions.CONNECT, highestKey: highestKey });
 					const tx = receiveTransaction(editorView.state, steps, clientIds);

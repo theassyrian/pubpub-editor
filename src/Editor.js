@@ -71,7 +71,7 @@ const Editor = (props) => {
 			{
 				state: state,
 				editable: (editorState) => {
-					console.log('collab is ready', collabIsReady(editorState));
+					// console.log('collab is ready', collabIsReady(editorState));
 					return !props.isReadOnly && collabIsReady(editorState);
 				},
 				handleKeyDown: keydownHandler({
