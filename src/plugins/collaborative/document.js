@@ -134,11 +134,10 @@ export const createDocumentPlugin = (schema, props) => {
 				highestKey: Math.max(highestKey, getHighestKeyFromChanges(pendingChanges)),
 			});
 		}
-		if (prevState.status === Status.SENDING && status === Status.IDLE && pendingChanges.length > 0) {
-			dispatch({ type: Actions.START_FLUSH });
-		}
 		if (prevState.status === Status.FLUSHING && status === Status.IDLE && sendableSteps(editorView.state)) {
 			dispatch({ type: Actions.START_SEND });
+		} else if (status === Status.IDLE && pendingChanges.length > 0) {
+			dispatch({ type: Actions.START_FLUSH });
 		}
 	};
 
