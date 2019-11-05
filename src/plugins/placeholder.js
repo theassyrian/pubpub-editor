@@ -7,21 +7,21 @@ export default (schema, props) => {
 	return new Plugin({
 		props: {
 			decorations: (state) => {
-				const doc = state.doc;
-				if (docIsEmpty(doc) && props.placeholder) {
-					const placeHolderElem = document.createElement('span');
-					placeHolderElem.className = 'prosemirror-placeholder';
-					const collaborativePluginState = collaborativePluginKey.getState(state);
-					const placeholderText =
-						props.collaborativeOptions.firebaseRef &&
-						!collaborativePluginState.isConnected
-							? 'Loading...'
-							: props.placeholder;
-					placeHolderElem.innerHTML = placeholderText;
-					return DecorationSet.create(doc, [
-						Decoration.widget(doc.childCount, placeHolderElem),
-					]);
-				}
+				// const doc = state.doc;
+				// if (docIsEmpty(doc) && props.placeholder) {
+				// 	const placeHolderElem = document.createElement('span');
+				// 	placeHolderElem.className = 'prosemirror-placeholder';
+				// 	const collaborativePluginState = collaborativePluginKey.getState(state);
+				// 	const placeholderText =
+				// 		props.collaborativeOptions.firebaseRef &&
+				// 		!collaborativePluginState.isConnected
+				// 			? 'Loading...'
+				// 			: props.placeholder;
+				// 	placeHolderElem.innerHTML = placeholderText;
+				// 	return DecorationSet.create(doc, [
+				// 		Decoration.widget(doc.childCount, placeHolderElem),
+				// 	]);
+				// }
 				return null;
 			},
 		},

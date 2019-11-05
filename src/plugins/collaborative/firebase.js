@@ -2,7 +2,7 @@ import { Step } from 'prosemirror-transform';
 import { compressStepJSON, uncompressStepJSON } from 'prosemirror-compress-pubpub';
 import uuidv4 from 'uuid/v4';
 
-import { firebaseTimestamp } from '../utils';
+import { firebaseTimestamp } from '../../utils';
 
 const getBranchIdFromRef = (ref) => ref.key.replace('branch-', '');
 

@@ -1,2 +1,2 @@
-export { default, sendCollabChanges, collaborativePluginKey } from './collaborative';
-export { addDiscussion } from './discussions';
+export { default } from './collaborative';
+export { getCollabState, collabIsReady, sendCollabChanges } from './document';

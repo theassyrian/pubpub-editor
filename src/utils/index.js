@@ -13,7 +13,7 @@ import css from 'css';
 import camelCaseCss from 'camelcase-css';
 
 import { defaultNodes, defaultMarks } from '../schemas';
-import { addDiscussion } from '../plugins/collaborative';
+import { addDiscussion } from '../plugins/collaborative/discussions';
 
 export const firebaseTimestamp = { '.sv': 'timestamp' };
 

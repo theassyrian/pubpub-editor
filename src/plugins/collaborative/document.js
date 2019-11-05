@@ -1,4 +1,5 @@
 import { receiveTransaction, sendableSteps } from 'prosemirror-collab';
+import { Plugin, PluginKey } from 'prosemirror-state';
 
 import {
 	receiveInitialChanges,
@@ -7,8 +8,11 @@ import {
 	receiveCollabChanges,
 } from './firebase';
 
+const collabPluginKey = new PluginKey('collab');
+
 const Actions = {
 	CONNECT: 'connect',
+	DISABLE: 'disable',
 	START_SEND: 'start_send',
 	FINISH_SEND: 'finish_send',
 	RECEIVE_CHANGE: 'receive_change',
@@ -21,14 +25,26 @@ export const Status = {
 	IDLE: 'idle',
 	FLUSHING: 'flushing',
 	SENDING: 'sending',
+	DISABLED: 'disabled',
+};
+
+export const getCollabState = (editorState) => collabPluginKey.getState(editorState);
+
+export const sendCollabChanges = (editorState) =>
+	getCollabState(editorState).dispatch({ type: Actions.START_SEND });
+
+export const collabIsReady = (editorState) => {
+	const { status } = getCollabState(editorState);
+	return status !== Status.LOADING;
 };
 
 const reducer = (state, action) => {
 	const { pendingChanges, status } = state;
-	console.log('dispatched', action.type);
 	switch (action.type) {
 		case Actions.CONNECT:
 			return { status: Status.IDLE, highestKey: action.highestKey };
+		case Actions.DISABLE:
+			return { status: Status.DISABLED };
 		case Actions.RECEIVE_CHANGE:
 			return { pendingChanges: [...pendingChanges, action.change] };
 		case Actions.START_SEND:
@@ -44,22 +60,29 @@ const reducer = (state, action) => {
 	}
 };
 
-export default ({ editorView, firebaseRef, initialKey, prosemirrorSchema, onStateChange }) => {
+export const createDocumentPlugin = (schema, props) => {
+	const {
+		collaborativeOptions: { firebaseRef, initialDocKey, onUpdateHighestKey, onStatusChange },
+	} = props;
+
+	let editorView;
 	let state = {
 		pendingChanges: [],
-		highestKey: initialKey,
+		highestKey: initialDocKey,
 		status: Status.LOADING,
 	};
 
 	const handleStateChange = (prevState, nextState, dispatch) => {
 		const { status, pendingChanges, highestKey } = nextState;
-		onStateChange(nextState);
-		if (prevState.status !== status) {
-			console.log(prevState.status, '->', status);
+		if (onStatusChange && prevState.status !== status) {
+			onStatusChange(status);
+		}
+		if (onUpdateHighestKey && prevState.highestKey !== highestKey) {
+			onUpdateHighestKey(highestKey);
 		}
 		// When we connect, listen for subsequent changes.
 		if (status === Status.IDLE && prevState.status === Status.LOADING) {
-			receiveCollabChanges(firebaseRef, highestKey, prosemirrorSchema, (change) => {
+			receiveCollabChanges(firebaseRef, highestKey, schema, (change) => {
 				dispatch({ type: Actions.RECEIVE_CHANGE, change: change });
 			});
 		}
@@ -75,7 +98,6 @@ export default ({ editorView, firebaseRef, initialKey, prosemirrorSchema, onStat
 				dispatch({ type: Actions.FINISH_SEND });
 			}
 		}
-
 		// Flushing is a synchronous operation, but it's not atomic from the point of the reducer.
 		// Calling editorView.dispatch() will generate START_SEND actions which the reducer
 		// will ignore when status !== IDLE. So we have to take care about when we enter and exit
@@ -100,22 +122,35 @@ export default ({ editorView, firebaseRef, initialKey, prosemirrorSchema, onStat
 		handleStateChange(prevState, state, dispatch);
 	};
 
-	const connect = () => {
-		receiveInitialChanges(firebaseRef, initialKey, prosemirrorSchema).then((initialChange) => {
-			const { steps, clientIds, highestKey } = initialChange;
-			const tx = receiveTransaction(editorView.state, steps, clientIds);
-			editorView.dispatch(tx);
-			dispatch({ type: Actions.CONNECT, highestKey: highestKey });
-		});
+	const connect = (nextEditorView) => {
+		editorView = nextEditorView;
+		if (firebaseRef) {
+			receiveInitialChanges(firebaseRef, initialDocKey, schema).then((initialChange) => {
+				const { steps, clientIds, highestKey } = initialChange;
+				const tx = receiveTransaction(editorView.state, steps, clientIds);
+				editorView.dispatch(tx);
+				dispatch({ type: Actions.CONNECT, highestKey: highestKey });
+			});
+		} else {
+			dispatch({ type: Actions.DISABLE });
+		}
 	};
 
-	const sendCollabChanges = () => {
-		dispatch({ type: Actions.START_SEND });
-	};
-
-	connect();
-
-	return {
-		sendCollabChanges: sendCollabChanges,
-	};
+	return new Plugin({
+		key: collabPluginKey,
+		state: {
+			init: () => ({
+				...state,
+				dispatch: dispatch,
+			}),
+			apply: () => ({
+				...state,
+				dispatch: dispatch,
+			}),
+		},
+		view: (nextEditorView) => {
+			connect(nextEditorView);
+			return {};
+		},
+	});
 };

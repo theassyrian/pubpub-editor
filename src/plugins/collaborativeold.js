@@ -61,7 +61,7 @@ export default (schema, props) => {
 			localClientData: collabOptions.clientData,
 			localClientId: localClientId,
 			onStatusChange: collabOptions.onStatusChange || function() {},
-			onUpdateLatestKey: collabOptions.onUpdateLatestKey || function() {},
+			onUpdateHighestKey: collabOptions.onUpdateHighestKey || function() {},
 		}),
 	];
 };
@@ -174,7 +174,7 @@ class CollaborativePlugin extends Plugin {
 					}),
 				);
 
-				this.pluginProps.onUpdateLatestKey(this.mostRecentRemoteKey);
+				this.pluginProps.onUpdateHighestKey(this.mostRecentRemoteKey);
 
 				const trans = receiveTransaction(this.view.state, steps, stepClientIds);
 				this.view.dispatch(trans);
@@ -235,7 +235,7 @@ class CollaborativePlugin extends Plugin {
 					trans.setMeta(metaKey, meta[metaKey]);
 				});
 			}
-			this.pluginProps.onUpdateLatestKey(this.mostRecentRemoteKey);
+			this.pluginProps.onUpdateHighestKey(this.mostRecentRemoteKey);
 			return this.view.dispatch(trans);
 		} catch (err) {
 			console.error('Error in recieveCollabChanges:', err);

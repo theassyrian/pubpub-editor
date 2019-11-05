@@ -1,100 +1,23 @@
-import { Plugin, PluginKey } from 'prosemirror-state';
-import { collab, receiveTransaction, sendableSteps } from 'prosemirror-collab';
+import { collab } from 'prosemirror-collab';
 
-import { generateHash, storeCheckpoint } from '../../utils';
+import { generateHash } from '../../utils';
 
-import { createFirebaseAuthority } from './authority';
-import { createDiscussionsPlugin } from './discussions';
+import { createDocumentPlugin } from './document';
 
-export const collaborativePluginKey = new PluginKey('collaborative');
+// const transactionContainsInvalidKeys = (transaction) => {
+// 	const validMetaKeys = ['history$', 'paste', 'uiEvent'];
+// 	return Object.keys(transaction.meta).some((key) => {
+// 		const keyIsValid = validMetaKeys.includes(key);
+// 		return !keyIsValid;
+// 	});
+// };
 
-const transactionContainsInvalidKeys = (transaction) => {
-	const validMetaKeys = ['history$', 'paste', 'uiEvent'];
-	return Object.keys(transaction.meta).some((key) => {
-		const keyIsValid = validMetaKeys.includes(key);
-		return !keyIsValid;
-	});
-};
-
-export const sendCollabChanges = async (editorView, transaction) => {
-	const { authority } = collaborativePluginKey.getState(editorView.state);
-	const editable = editorView.props.editable(editorView.state);
-	const sendable = sendableSteps(editorView.state);
-	if (sendable && editable && !transactionContainsInvalidKeys(transaction)) {
-		await authority.sendCollabChanges(editorView, transaction);
+export default (schema, props) => {
+	const { collaborativeOptions } = props;
+	if (collaborativeOptions) {
+		const { clientData = {} } = collaborativeOptions;
+		const localClientId = `${clientData.id}-${generateHash(6)}`;
+		return [collab({ clientID: localClientId }), createDocumentPlugin(schema, props)];
 	}
-};
-
-const createFirebaseCollabPlugin = ({ authority, checkpointInterval, onError }) => {
-	// const ongoingTransaction = false;
-	// const pendingChanges = [];
-
-	// const processPendingChanges = (editorView) => {
-	// 	if (!ongoingTransaction) {
-	// 		pendingChanges.forEach(({ steps, clientIds, highestKey }) => {
-	// 			const trans = receiveTransaction(editorView.state, steps, clientIds);
-	// 			editorView.dispatch(trans);
-	// 			if (checkpointInterval && highestKey > 0 && highestKey % checkpointInterval === 0) {
-	// 				storeCheckpoint(authority.getFirebaseRef(), editorView.state.doc, highestKey);
-	// 			}
-	// 		});
-	// 	}
-	// };
-
-	// const receiveSteps = (editorView) => (change) => {
-	// 	try {
-	// 		if (change) {
-	// 			pendingChanges.push(change);
-	// 		}
-	// 		processPendingChanges(editorView);
-	// 	} catch (err) {
-	// 		onError(err);
-	// 	}
-	// };
-
-	// const setupView = (editorView) => {
-	// 	authority
-	// 		.connect(receiveSteps(editorView))
-	// 		.then(() => {
-	// 			const connectedTransaction = editorView.state.tr;
-	// 			connectedTransaction.setMeta('connectedToFirebase', true);
-	// 			editorView.dispatch(connectedTransaction);
-	// 		})
-	// 		.catch(onError);
-	// 	return {};
-	// };
-
-	return new Plugin({
-		key: collaborativePluginKey,
-		state: {
-			init: () => {
-				return {};
-			},
-			apply: () => {
-				return {};
-			},
-		},
-		// view: setupView,
-	});
-};
-
-export default (schema, { onError, collaborativeOptions = {} }) => {
-	const { firebaseRef, clientData } = collaborativeOptions;
-	if (!firebaseRef) {
-		return [];
-	}
-
-	const localClientId = `${clientData.id}-${generateHash(6)}`;
-
-	return [
-		collab({ clientID: localClientId }),
-		createFirebaseCollabPlugin({
-			checkpointInterval: 100,
-			onError: (err) => {
-				console.error(err);
-				onError(err);
-			},
-		}),
-		// createDiscussionsPlugin({ authority: authority }),
-	];
+	return [];
 };

@@ -145,7 +145,7 @@ export const addDiscussion = (editorView, discussionId, { from, to }) => {
 
 // TODO(ian): Checking sendableSteps?
 export const createDiscussionsPlugin = ({ authority }) => {
-	const updateState = (transaction, pluginState, __, editorState) => {
+	const updateState = (transaction, pluginState, _, editorState) => {
 		const { discussionDecorations } = pluginState;
 		const updates = transaction.getMeta(discussionsPluginKey) || [];
 		const decorationsToRemove = getDecorationsToRemove(updates, discussionDecorations);

@@ -165,7 +165,7 @@ storiesOf('Editor', module)
 							clientData: clientData,
 							initialDocKey: -1,
 							// onClientChange: () => {},
-							// onStatusChange: () => {},
+							onStatusChange: (status) => console.info('collab status is', status),
 						}}
 					/>
 				</div>
