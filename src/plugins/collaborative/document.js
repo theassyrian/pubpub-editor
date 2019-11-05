@@ -135,9 +135,9 @@ export const createDocumentPlugin = (schema, props) => {
 			receiveInitialChanges(firebaseRef, initialDocKey, schema).then((initialChange) => {
 				const { steps, clientIds, highestKey } = initialChange;
 				try {
+					dispatch({ type: Actions.CONNECT, highestKey: highestKey });
 					const tx = receiveTransaction(editorView.state, steps, clientIds);
 					editorView.dispatch(tx);
-					dispatch({ type: Actions.CONNECT, highestKey: highestKey });
 				} catch (err) {
 					onError(err);
 				}
