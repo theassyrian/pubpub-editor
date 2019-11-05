@@ -56,7 +56,7 @@ const reducer = (state, action) => {
 		case Actions.FINISH_FLUSH:
 			return { status: Status.IDLE, pendingChanges: [], highestKey: action.highestKey };
 		default:
-			return state.status;
+			return state;
 	}
 };
 
