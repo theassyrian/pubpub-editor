@@ -19,6 +19,7 @@ const propTypes = {
 	/* An object with nodeName keys and values of objects of overriding options. For example: nodeOptions = { image: { linkToSrc: false } } */
 	nodeOptions: PropTypes.object,
 	collaborativeOptions: PropTypes.object,
+	onBlur: PropTypes.func,
 	onChange: PropTypes.func,
 	onKeyPress: PropTypes.func,
 	onError: PropTypes.func,
@@ -27,6 +28,7 @@ const propTypes = {
 	isReadOnly: PropTypes.bool,
 	handleSingleClick: PropTypes.func,
 	handleDoubleClick: PropTypes.func,
+	handleScrollToSelection: PropTypes.func,
 };
 
 const defaultProps = {
@@ -36,6 +38,7 @@ const defaultProps = {
 	nodeOptions: {},
 	collaborativeOptions: {},
 	onChange: () => {},
+	onBlur: () => {},
 	onError: () => {},
 	onKeyPress: () => {},
 	initialContent: { type: 'doc', attrs: { meta: {} }, content: [{ type: 'paragraph' }] },
@@ -43,13 +46,14 @@ const defaultProps = {
 	isReadOnly: false,
 	handleSingleClick: undefined,
 	handleDoubleClick: undefined,
+	handleScrollToSelection: undefined,
 };
 
 const StaticDoc = React.memo(({ schema, content }) => renderStatic(schema, content));
 
 StaticDoc.propTypes = {
 	schema: PropTypes.object.isRequired,
-	content: PropTypes.object.isRequired,
+	content: PropTypes.array.isRequired,
 };
 
 const Editor = (props) => {
@@ -95,9 +99,13 @@ const Editor = (props) => {
 						return true;
 					},
 				}),
+				handleDOMEvents: {
+					blur: props.onBlur,
+				},
 				handleKeyPress: props.onKeyPress,
 				handleClickOn: props.handleSingleClick,
 				handleDoubleClickOn: props.handleDoubleClick,
+				handleScrollToSelection: props.handleScrollToSelection,
 				dispatchTransaction: (transaction) => {
 					try {
 						const newState = view.state.apply(transaction);
