@@ -19,16 +19,15 @@ const propTypes = {
 	/* An object with nodeName keys and values of objects of overriding options. For example: nodeOptions = { image: { linkToSrc: false } } */
 	nodeOptions: PropTypes.object,
 	collaborativeOptions: PropTypes.object,
-	onBlur: PropTypes.func,
 	onChange: PropTypes.func,
 	onKeyPress: PropTypes.func,
 	onError: PropTypes.func,
+	onScrollToSelection: PropTypes.func,
 	initialContent: PropTypes.object,
 	placeholder: PropTypes.string,
 	isReadOnly: PropTypes.bool,
 	handleSingleClick: PropTypes.func,
 	handleDoubleClick: PropTypes.func,
-	handleScrollToSelection: PropTypes.func,
 };
 
 const defaultProps = {
@@ -38,15 +37,14 @@ const defaultProps = {
 	nodeOptions: {},
 	collaborativeOptions: {},
 	onChange: () => {},
-	onBlur: () => {},
 	onError: () => {},
 	onKeyPress: () => {},
+	onScrollToSelection: undefined,
 	initialContent: { type: 'doc', attrs: { meta: {} }, content: [{ type: 'paragraph' }] },
 	placeholder: '',
 	isReadOnly: false,
 	handleSingleClick: undefined,
 	handleDoubleClick: undefined,
-	handleScrollToSelection: undefined,
 };
 
 const StaticDoc = React.memo(({ schema, content }) => renderStatic(schema, content));
@@ -99,13 +97,10 @@ const Editor = (props) => {
 						return true;
 					},
 				}),
-				handleDOMEvents: {
-					blur: props.onBlur,
-				},
 				handleKeyPress: props.onKeyPress,
 				handleClickOn: props.handleSingleClick,
 				handleDoubleClickOn: props.handleDoubleClick,
-				handleScrollToSelection: props.handleScrollToSelection,
+				handleScrollToSelection: props.onScrollToSelection,
 				dispatchTransaction: (transaction) => {
 					try {
 						const newState = view.state.apply(transaction);
